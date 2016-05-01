@@ -5,3 +5,4 @@
 + Internet connection (ping)
 + Uploaded/Downloaded MBs (ifconfig)
 + Disk usage (specify /dev/)
++ MAC
