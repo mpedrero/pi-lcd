@@ -27,16 +27,22 @@ __pi-lcd__ displays misc information in a 16x2 character display. To do this, yo
 In the current version, possible values for `line0` and `line1` are:
 
 + __hostname__: displays Raspberry Pi's hostname
-+ __ip__: displays IP (currently on eth0)
++ __ip__: displays IP on specified device
 + __load__: load on the last 1m/5m/15m
 + __uptime__: time since Raspberry Pi was powered on
 + __temp__: Temperature in Celsius
++ __ram__: Used and total RAM
++ __swap__: Used and total Swap
 
 This readme will be updated regularly when more values are available.
 
 ## Advanced configuration
 
-The update interval of various events can be specified in `pi-lcd.cfg`:
+These values are defined in `settings` group of `pi-lcd.cfg` file.
+
++ __ip\_device__: device used to show IP (e.g. eth0)
+
+The update interval of various events can be specified:
 
 + __model\_interval__: time between info updates.
 + __disp\_interval__: time between display updates.
@@ -50,6 +56,7 @@ All the values are expressed in seconds. Decimal values can be used. Note that l
 	npages           = 4
 	nlines           = 2
 	ncols            = 16
+	ip_device        = eth0
 	model_interval   = 1
 	disp_interval    = 2
 	buttons_interval = 0.02

@@ -13,8 +13,9 @@ import Adafruit_CharLCD as LCD
 # Globals
 npages = 4                          # Number of different info pages
 page = 0                            # Current info page
-enable_display = True                # Display on/off
+enable_display = True               # Display on/off
 button_changed = True               # Has been any button triggered?
+ip_device = 'eth0'                  # Device to show IP
 lcd = LCD.Adafruit_CharLCDPlate()   # Object representing LCD Hat
 content = {}
 info = {}
@@ -59,17 +60,33 @@ def getLoad():
     cad_load += re.match(r'(.+)load average\: (\d+\.\d+), (\d+\.\d+), (\d+\.\d+)',aux_load).group(4)
     return cad_load
     
-
+# Get RAM
+def getRAM():
+    aux_ram = run_cmd("free -h -m")
+    parsed_ram = re.search(r'Mem: *(\d+M) *(\d+M) *(\d+M).*',aux_ram)
+    cad_ram = "RAM: "+str(parsed_ram.group(2))+"/"+str(parsed_ram.group(1))
+    return cad_ram
+    
+# Get Swap
+def getSwap():
+    aux_swap = run_cmd("free -h -m")
+    parsed_swap = re.search(r'Swap: *(\d+[MB]) *(\d+[MB]).*',aux_swap)
+    cad_swap = "Swap: "+str(parsed_swap.group(2))+"/"+str(parsed_swap.group(1))
+    return cad_swap
     
     
 # Data model worker
 def dataModelWorker(interval=1):
+    global ip_device
+    
     while True:
         info["hostname"] = getHostname()
-        info["ip"]       = getIP()
+        info["ip"]       = getIP(ip_device)
         info["load"]     = getLoad()
         info["uptime"]   = getUptime()
         info["temp"]     = getTemp()
+        info["ram"]      = getRAM()
+        info["swap"]     = getSwap()
         time.sleep(interval)
         
     
@@ -130,6 +147,7 @@ try:
     model_interval   = float(cfg_parser.get('settings', 'model_interval'))
     disp_interval    = float(cfg_parser.get('settings', 'disp_interval'))
     buttons_interval = float(cfg_parser.get('settings', 'buttons_interval'))
+    ip_device        = str(cfg_parser.get('settings', 'ip_device'))
     
     for i in range(0,npages):
         key = 'page'+str(i)
