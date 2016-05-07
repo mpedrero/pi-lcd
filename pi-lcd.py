@@ -14,6 +14,7 @@ import Adafruit_CharLCD as LCD
 npages = 4                          # Number of different info pages
 page = 0                            # Current info page
 enable_display = True               # Display on/off
+enable_reboot = False
 button_changed = True               # Has been any button triggered?
 ip_device = 'eth0'                  # Device to show IP
 disk_partition = '/dev/mmcblk0p1'   # Partition to show info
@@ -161,6 +162,31 @@ def getSwap():
     cad_swap = "Swap: "+str(parsed_swap.group(2))+"/"+str(parsed_swap.group(1))
     return cad_swap
     
+# Are you sure to reboot the system?
+def warningReboot():
+
+    # Wait for LEFT to be released
+    while lcd.is_pressed(LCD.LEFT):
+        pass
+        
+    lcd.clear()
+    lcd.set_cursor(0,0)
+    lcd.message("Sure to reboot?")
+    lcd.set_cursor(0,1)
+    lcd.message("Y: Left, N: Any")
+    
+    while True:
+        if lcd.is_pressed(LCD.LEFT):
+            return True
+        if lcd.is_pressed(LCD.RIGHT):
+            return False
+        if lcd.is_pressed(LCD.UP):
+            return False
+        if lcd.is_pressed(LCD.DOWN):
+            return False
+        if lcd.is_pressed(LCD.SELECT):
+            return False
+        time.sleep(0.1)
     
 # Data model worker
 def dataModelWorker(interval=1):
@@ -185,6 +211,7 @@ def dataModelWorker(interval=1):
 # Data display worker
 def dataDisplayWorker(interval=2):
     global enable_display
+    global enable_reboot
     global button_changed
     global page
     global ncols
@@ -194,13 +221,17 @@ def dataDisplayWorker(interval=2):
         if button_changed:
             button_changed = False
             lcd.clear()
-            
+        if enable_reboot:
+            if warningReboot():
+                run_cmd("sudo reboot")
+            else:
+                enable_reboot = False
+                lcd.clear()
         lcd.set_cursor(0,0)
         lcd.message(info[content['page'+str(page),'line0']])
         lcd.set_cursor(0,1)
         lcd.message(info[content['page'+str(page),'line1']])
-        #lcd.set_cursor(ncols-1,0)
-        #lcd.message(str(page))
+
         time.sleep(interval)
 
         
@@ -209,11 +240,15 @@ def buttonsWorker(interval=0.01):
     global page
     global button_changed
     global enable_display
+    global enable_reboot
     
     while True:
         if not button_changed:
             if lcd.is_pressed(LCD.SELECT):
                 enable_display = not enable_display
+                button_changed = True
+            if lcd.is_pressed(LCD.LEFT):
+                enable_reboot = True
                 button_changed = True
             if lcd.is_pressed(LCD.UP):
                 page = (page - 1)%npages

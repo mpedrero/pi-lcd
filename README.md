@@ -1,6 +1,23 @@
 # pi-lcd
 Program to show misc information with LCD RGB Keypad for RPi
 
+## Screenshots
+
+![Hostname and HDD space](https://dl.dropboxusercontent.com/u/2904420/pi-lcd-photos/pi-lcd1.jpg)
+<center>Hostname and HDD space</center>
+
+![CPU clock and temperature](https://dl.dropboxusercontent.com/u/2904420/pi-lcd-photos/pi-lcd2.jpg)
+<center>CPU clock and temperature</center>
+
+![RAM and Swap](https://dl.dropboxusercontent.com/u/2904420/pi-lcd-photos/pi-lcd3.jpg)
+<center>RAM and Swap</center>
+
+![Network velocity and bytes](https://dl.dropboxusercontent.com/u/2904420/pi-lcd-photos/pi-lcd4.jpg)
+<center>Network speed and bytes transferred</center>
+
+![Headless reboot](https://dl.dropboxusercontent.com/u/2904420/pi-lcd-photos/pi-lcd5.jpg)
+<center>Headless reboot</center>
+
 ## Usage
 Start the program with `./pi-lcd`
 
@@ -9,6 +26,16 @@ Select button turns the screen on and off, Up/Down buttons change the informatio
 `ifstat` package is required to show network speed. It can be installed with:
     
     $> sudo apt install ifstat
+
+To use reboot button without executing `pi-lcd` as root, edit sudoers file with:
+	
+	$> sudo visudo
+
+And add the following line:
+
+	$> pi ALL=NOPASSWD: /sbin/reboot
+
+If user executing `pi-lcd` **is not** pi, substitute with the correct user.
 
 ## Libraries
 
