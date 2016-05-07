@@ -24,11 +24,12 @@ info = {}
 cfg_parser = ConfigParser.ConfigParser()
 
 # Display custom characters
-lcd.create_char(1, [0,4,14,21,4,4,4,0]) # Upload speed
-lcd.create_char(2, [0,4,4,4,21,14,4,0]) # Download speed
-lcd.create_char(3, [0,4,14,31,0,10,10,4]) # Upload bytes
+lcd.create_char(1, [0,4,14,21,4,4,4,0])    # Upload speed
+lcd.create_char(2, [0,4,4,4,21,14,4,0])    # Download speed
+lcd.create_char(3, [0,4,14,31,0,10,10,4])  # Upload bytes
 lcd.create_char(4, [0,31,14,4,0,12,10,12]) # Download bytes
 lcd.create_char(5, [0,0,30,21,17,17,31,0]) # Disk
+lcd.create_char(6, [14,10,14,0,0,0,0,0])   # Degrees symbol (for temp)
 
 # Execute a shell command and return the output
 def run_cmd(cmd):
@@ -137,6 +138,7 @@ def getUptime():
 def getTemp():
     aux_temp = run_cmd("/opt/vc/bin/vcgencmd measure_temp")
     cad_temp = re.match(r'temp=(\d+\.\d+)\'C',aux_temp).group(1)
+    cad_temp = "Temp: "+cad_temp+"\x06C"
     return cad_temp
 
 # Get load
