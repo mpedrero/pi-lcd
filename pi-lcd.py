@@ -158,7 +158,7 @@ def getRAM():
 # Get Swap
 def getSwap():
     aux_swap = run_cmd("free -h -m")
-    parsed_swap = re.search(r'Swap: *(\d+[MB]) *(\d+[MB]).*',aux_swap)
+    parsed_swap = re.search(r'Swap: *(\d+[MBK]) *(\d+[MBK]).*',aux_swap)
     cad_swap = "Swap: "+str(parsed_swap.group(2))+"/"+str(parsed_swap.group(1))
     return cad_swap
     
