@@ -21,8 +21,10 @@ Program to show misc information with LCD RGB Keypad for RPi
 ## Usage
 Start the program with `./pi-lcd`
 
-Select button turns the screen on and off, Up/Down buttons change the information pages.
-Left button reboot Raspberry Pi (Must be pressed twice to avoid accidental activation).
++ **Select** button turns the screen on and off. 
++ **Up/Down** buttons change the information pages.
++ **Left** button reboot Raspberry Pi (Must be pressed twice to avoid accidental activation).
++ **Right** button restarts the display (Useful if there are corrupt characters or after a screen disconection).
 
 `ifstat` package is required to show network speed. It can be installed with:
     

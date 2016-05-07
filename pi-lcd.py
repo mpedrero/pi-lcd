@@ -14,8 +14,9 @@ import Adafruit_CharLCD as LCD
 npages = 4                          # Number of different info pages
 page = 0                            # Current info page
 enable_display = True               # Display on/off
-enable_reboot = False
+enable_reboot = False               # Reboot flag
 button_changed = True               # Has been any button triggered?
+restart_display = False             # If True, display will be restarted 
 ip_device = 'eth0'                  # Device to show IP
 disk_partition = '/dev/mmcblk0p1'   # Partition to show info
 lcd = LCD.Adafruit_CharLCDPlate()   # Object representing LCD Hat
@@ -72,8 +73,7 @@ def unit(bytes):
         b = bytes/1099511627776
         
     return str(round(b,1))+u
-        
-    
+            
 # Get internal IP
 def getIP(device="eth0"):
     cad_ip = "                "
@@ -113,10 +113,8 @@ def getDiskInfo(device="/dev/sda1"):
         use       = cad_disk.group(4)
         disk = "\x05 "+unit(int(used)*1024)+"/"+unit(int(available)*1024)
     else:
-        disk = "Disk not found"
-        
+        disk = "Disk not found"    
     return disk
-    
     
 # Get hostname
 def getHostname():
@@ -166,7 +164,6 @@ def getSwap():
     
 # Are you sure to reboot the system?
 def warningReboot():
-
     # Wait for LEFT to be released
     while lcd.is_pressed(LCD.LEFT):
         pass
@@ -189,7 +186,37 @@ def warningReboot():
         if lcd.is_pressed(LCD.SELECT):
             return False
         time.sleep(0.1)
+
+# Try to reconnect the screen
+def screenDisconected():
+    global lcd
+    global enable_display
+    global enable_reboot
+    global button_changed
+    global restart_display
     
+    try:
+        lcd = LCD.Adafruit_CharLCDPlate()   # Reinit LCD
+        lcd.set_color(0.0, 0.0, 0.0)        # Turn off RGB Led
+        
+        # Display custom characters
+        lcd.create_char(1, [0,4,14,21,4,4,4,0])    # Upload speed
+        lcd.create_char(2, [0,4,4,4,21,14,4,0])    # Download speed
+        lcd.create_char(3, [0,4,14,31,0,10,10,4])  # Upload bytes
+        lcd.create_char(4, [0,31,14,4,0,12,10,12]) # Download bytes
+        lcd.create_char(5, [0,0,30,21,17,17,31,0]) # Disk
+        lcd.create_char(6, [14,10,14,0,0,0,0,0])   # Degrees symbol (for temp)
+        
+        # Button status
+        enable_display = True               # Display on/off
+        enable_reboot = False               # Reboot flag
+        button_changed = True               # Has been any button triggered?
+        restart_display = False             # If True, display will be restarted 
+        
+        lcd.clear() # Clear display
+    except:
+        pass
+
 # Data model worker
 def dataModelWorker(interval=1):
     global ip_device
@@ -209,57 +236,69 @@ def dataModelWorker(interval=1):
         info["disk"]     = getDiskInfo(disk_partition)
         time.sleep(interval)
         
-    
 # Data display worker
 def dataDisplayWorker(interval=2):
     global enable_display
     global enable_reboot
     global button_changed
+    global restart_display
     global page
     global ncols
+    global lcd
     
     while True:
-        lcd.enable_display(enable_display)
-        if button_changed:
-            button_changed = False
-            lcd.clear()
-        if enable_reboot:
-            if warningReboot():
-                run_cmd("sudo reboot")
-            else:
-                enable_reboot = False
+        try:
+            lcd.enable_display(enable_display)
+            if button_changed:
+                button_changed = False
                 lcd.clear()
-        lcd.set_cursor(0,0)
-        lcd.message(info[content['page'+str(page),'line0']])
-        lcd.set_cursor(0,1)
-        lcd.message(info[content['page'+str(page),'line1']])
+            if restart_display:
+                restart_display = False
+                screenDisconected()
+            if enable_reboot:
+                if warningReboot():
+                    run_cmd("sudo reboot")
+                else:
+                    enable_reboot = False
+                    lcd.clear()
+            lcd.set_cursor(0,0)
+            lcd.message(info[content['page'+str(page),'line0']])
+            lcd.set_cursor(0,1)
+            lcd.message(info[content['page'+str(page),'line1']])
 
-        time.sleep(interval)
-
-        
+            time.sleep(interval)
+        except IOError:
+            screenDisconected()
+            
 # Buttons handler worker        
 def buttonsWorker(interval=0.01):
     global page
     global button_changed
     global enable_display
     global enable_reboot
+    global restart_display
     
     while True:
-        if not button_changed:
-            if lcd.is_pressed(LCD.SELECT):
-                enable_display = not enable_display
-                button_changed = True
-            if lcd.is_pressed(LCD.LEFT):
-                enable_reboot = True
-                button_changed = True
-            if lcd.is_pressed(LCD.UP):
-                page = (page - 1)%npages
-                button_changed = True
-            if lcd.is_pressed(LCD.DOWN):
-                page = (page + 1)%npages
-                button_changed = True
-        time.sleep(interval)
-            
+        try:
+            if not button_changed:
+                if lcd.is_pressed(LCD.SELECT):
+                    enable_display = not enable_display
+                    button_changed = True
+                if lcd.is_pressed(LCD.LEFT):
+                    enable_reboot = True
+                    button_changed = True
+                if lcd.is_pressed(LCD.RIGHT):
+                    restart_display = True
+                    button_changed = True
+                if lcd.is_pressed(LCD.UP):
+                    page = (page - 1)%npages
+                    button_changed = True
+                if lcd.is_pressed(LCD.DOWN):
+                    page = (page + 1)%npages
+                    button_changed = True
+            time.sleep(interval)
+        except IOError:
+            screenDisconected()
             
             
             
