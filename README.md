@@ -4,8 +4,11 @@ Program to show misc information with LCD RGB Keypad for RPi
 ## Usage
 Start the program with `./pi-lcd`
 
-Select button turn the screen on and off, Up/Down buttons change the information pages.
+Select button turns the screen on and off, Up/Down buttons change the information pages.
 
+`ifstat` package is required to show network speed. It can be installed with:
+    
+    $> sudo apt install ifstat
 
 ## Libraries
 
@@ -29,10 +32,15 @@ In the current version, possible values for `line0` and `line1` are:
 + __hostname__: displays Raspberry Pi's hostname
 + __ip__: displays IP on specified device
 + __load__: load on the last 1m/5m/15m
++ __cpu__: cpu frequency
 + __uptime__: time since Raspberry Pi was powered on
-+ __temp__: Temperature in Celsius
-+ __ram__: Used and total RAM
-+ __swap__: Used and total Swap
++ __temp__: temperature in Celsius
++ __ram__: used and total RAM
++ __swap__: used and total Swap
++ __inetspeed__: real time network speed on specified device
++ __inetbytes__: downloaded and uploaded bytes on specified device
++ __mac__: MAC address of specified device
++ __disk__: used and available space on specified partition
 
 This readme will be updated regularly when more values are available.
 
@@ -41,6 +49,7 @@ This readme will be updated regularly when more values are available.
 These values are defined in `settings` group of `pi-lcd.cfg` file.
 
 + __ip\_device__: device used to show IP (e.g. eth0)
++ __disk\_partition__: partition used to show space (e.g. /dev/sda1)
 
 The update interval of various events can be specified:
 

@@ -16,11 +16,18 @@ page = 0                            # Current info page
 enable_display = True               # Display on/off
 button_changed = True               # Has been any button triggered?
 ip_device = 'eth0'                  # Device to show IP
+disk_partition = '/dev/mmcblk0p1'   # Partition to show info
 lcd = LCD.Adafruit_CharLCDPlate()   # Object representing LCD Hat
 content = {}
 info = {}
 cfg_parser = ConfigParser.ConfigParser()
 
+# Display custom characters
+lcd.create_char(1, [0,4,14,21,4,4,4,0]) # Upload speed
+lcd.create_char(2, [0,4,4,4,21,14,4,0]) # Download speed
+lcd.create_char(3, [0,4,14,31,0,10,10,4]) # Upload bytes
+lcd.create_char(4, [0,31,14,4,0,12,10,12]) # Download bytes
+lcd.create_char(5, [0,0,30,21,17,17,31,0]) # Disk
 
 # Execute a shell command and return the output
 def run_cmd(cmd):
@@ -28,17 +35,97 @@ def run_cmd(cmd):
     output = p.communicate()[0]
     return output
 
-
+def info_init():
+    info["hostname"] = getHostname()
+    info["ip"]       = getIP(ip_device)
+    info["load"]     = getLoad()
+    info["uptime"]   = getUptime()
+    info["temp"]     = getTemp()
+    info["ram"]      = getRAM()
+    info["swap"]     = getSwap()
+    info["inetspeed"]= getInetSpeed()
+    info["mac"]      = getMAC(ip_device)
+    info["inetbytes"]= getInetTransf(ip_device)
+    info["cpu"]      = getCPU()
+    info["disk"]     = getDiskInfo(disk_partition)
+    
+# Return suitable unit (B/KB/MB/GB/TB)
+def unit(bytes):
+    bytes = float(bytes)
+    
+    if bytes < 1000:
+        u = "B"
+        b = bytes
+    elif bytes < 1000000:
+        u = "KB"
+        b = bytes/1024
+    elif bytes < 1000000000:
+        u = "MB"
+        b = bytes/1048576
+    elif bytes < 1000000000000:
+        u = "GB"
+        b = bytes/1073741824
+    else:
+        u = "TB"
+        b = bytes/1099511627776
+        
+    return str(round(b,1))+u
+        
+    
 # Get internal IP
 def getIP(device="eth0"):
-    cad_ip = ""
+    cad_ip = "                "
     cad_ip = run_cmd("ip addr show "+device+" | grep \"inet \" | awk '{print $2}' | cut -d/ -f1")[:-1]
     return cad_ip
-   
+    
+# Get MAC address
+def getMAC(device="eth0"):
+    cad_mac = "                "
+    cad_mac = run_cmd("ifconfig "+device+" | grep HWaddr")[:-1]
+    aux_mac = re.search("HWaddr ((\w+:)+\w+)",cad_mac)
+    return str("MAC "+aux_mac.group(1).replace(':',''))
+
+# Get connection bytes    
+def getInetTransf(device="eth0"):
+    cad_transf = run_cmd("ifconfig "+device+" | grep \"RX bytes\"")[:-1]
+    aux_transf = re.search(r"RX bytes:(\d+) .+TX bytes:(\d+)",cad_transf)
+    rx = unit(aux_transf.group(1))
+    tx = unit(aux_transf.group(2))
+    return str("\04"+rx.ljust(7)+tx.rjust(7)+"\03")
+    
+# Get connection speed
+def getInetSpeed(device="eth0"):
+    aux_speed = run_cmd('ifstat -i '+device+' 1 1 | grep -E \"([0-9]+(\\.[0-9]+)*) +([0-9]+(\\.[0-9]+))\"')[:-1]
+    cad_speed = re.search(r"((\d+)(\.\d+)*) +((\d+)(\.\d+)*)",aux_speed)
+    download = cad_speed.group(2)
+    upload = cad_speed.group(5)
+    return str("\x02"+download.ljust(5)+"KB/s"+upload.rjust(5)+"\x01")
+
+# Get disk information
+def getDiskInfo(device="/dev/sda1"):
+    aux_disk = run_cmd("df "+device+" | grep \""+device+"\"")[:-1]
+    cad_disk = re.search(r"(\d+) +(\d+) +(\d+) +(\d+%).*",aux_disk)
+    if cad_disk != None:
+        used      = cad_disk.group(2)
+        available = cad_disk.group(3)
+        use       = cad_disk.group(4)
+        disk = "\x05 "+unit(int(used)*1024)+"/"+unit(int(available)*1024)
+    else:
+        disk = "Disk not found"
+        
+    return disk
+    
+    
 # Get hostname
 def getHostname():
     cad_hostname = run_cmd("hostname")
     return cad_hostname
+
+# Get clockspeed
+def getCPU():
+    cad_cpu = run_cmd("cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq")[:-1]
+    cad_cpu = "CPU: "+str(int(cad_cpu)/1000).rjust(4)+"MHz"
+    return cad_cpu
     
 # Get uptime
 def getUptime():
@@ -87,6 +174,11 @@ def dataModelWorker(interval=1):
         info["temp"]     = getTemp()
         info["ram"]      = getRAM()
         info["swap"]     = getSwap()
+        info["inetspeed"]= getInetSpeed()
+        info["mac"]      = getMAC(ip_device)
+        info["inetbytes"]= getInetTransf(ip_device)
+        info["cpu"]      = getCPU()
+        info["disk"]     = getDiskInfo(disk_partition)
         time.sleep(interval)
         
     
@@ -107,8 +199,8 @@ def dataDisplayWorker(interval=2):
         lcd.message(info[content['page'+str(page),'line0']])
         lcd.set_cursor(0,1)
         lcd.message(info[content['page'+str(page),'line1']])
-        lcd.set_cursor(ncols-1,0)
-        lcd.message(str(page))
+        #lcd.set_cursor(ncols-1,0)
+        #lcd.message(str(page))
         time.sleep(interval)
 
         
@@ -148,6 +240,7 @@ try:
     disp_interval    = float(cfg_parser.get('settings', 'disp_interval'))
     buttons_interval = float(cfg_parser.get('settings', 'buttons_interval'))
     ip_device        = str(cfg_parser.get('settings', 'ip_device'))
+    disk_partition   = str(cfg_parser.get('settings', 'disk_partition'))
     
     for i in range(0,npages):
         key = 'page'+str(i)
@@ -166,6 +259,9 @@ except:
 # Init and clear display
 lcd.set_color(0.0, 0.0, 0.0)    # Turn off RGB Led
 lcd.clear()                     # Clear display
+
+# Init info dict
+info_init()
 
 # Launch workers as daemons
 model     = threading.Thread(target=dataModelWorker, args=(model_interval,), name='Model')
